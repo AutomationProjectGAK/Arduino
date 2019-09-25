@@ -1,0 +1,46 @@
+void setup()
+{
+  pinMode(10, OUTPUT);
+  pinMode(3, INPUT_PULLUP);
+}
+
+void loop()
+{
+
+
+  //Code for Pin 3 used as a switch to turn servo from far left to the far right.
+  /*
+  if (digitalRead(3) == LOW){
+    analogWrite(10, 254);
+  }
+
+    if (digitalRead(3) == HIGH){
+    analogWrite(10, 1);
+  }
+  */
+  
+  // Code for making the servo to turn slowly back and forth if pin 3 is connected to ground.
+  /*  
+  // Check if pin 3 is connected to the ground
+ if (digitalRead(3) == LOW){
+
+  //Turning analog signal slowly from 1 -- 254
+  for(int x = 1; x < 254; x++){
+  analogWrite(10, x);
+  delay(5);
+  } 
+
+  //Turning analog signal slowly from 254 -- 1
+  for(int x = 254; x > 0; x--){
+  analogWrite(10, x);
+  delay(5);
+  } 
+  }
+  */
+  
+  
+ delay(700);
+ // Delay a little bit to improve simulation performance
+
+
+ }
