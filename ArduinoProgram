@@ -5,6 +5,7 @@
 *
 */
 
+  int x = 0;
 
 void setup() {
   // initialize serial communication:
@@ -13,7 +14,6 @@ void setup() {
 
 void loop() {
   int msg  =  3;
-  int x = 0;
 
 if (Serial.available()){
   
