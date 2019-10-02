@@ -13,6 +13,7 @@ void setup() {
 
 void loop() {
   int msg  =  3;
+  int x = 0;
 
 if (Serial.available()){
   
@@ -21,22 +22,38 @@ if (Serial.available()){
   //
   switch (msg) {
     case 0:    // 
-      Serial.write("0");
-      Serial.println("No change");
+      Serial.write("Message Confirmed!");
+      Serial.println("");
       msg = 3;
       break;
       
     case 1:    // 
-      Serial.write("0");
       //motor control commands
-      Serial.println("Open the shades");
+      if (x != 1){
+      Serial.write("Opening the shades.");
+      Serial.println("");
+        //Do motor controls
+        x=1;
+        }
+        else{
+          Serial.write("The shades are open.");
+          Serial.println("");
+          }
       msg = 3;
       break;
       
     case 2:    // 
-      Serial.write("0");
+      Serial.write("Closing the shades");
+      Serial.println("");
       //motor control commands
-      Serial.println("Close the shades");
+      if (x != 2){
+        //Do motor controls
+        x=2;
+      }
+        else{
+          Serial.write("The shades are closed.");
+          Serial.println("");
+          }
       msg = 3;
       break;
       
