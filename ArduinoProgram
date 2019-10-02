@@ -1,0 +1,49 @@
+/*
+*           Arduino Program
+*
+*       *Main Arduino Program*
+*
+*/
+
+
+void setup() {
+  // initialize serial communication:
+  Serial.begin(9600);
+}
+
+void loop() {
+  int msg  =  3;
+
+if (Serial.available()){
+  
+  int msg = Serial.parseInt();
+  
+  //
+  switch (msg) {
+    case 0:    // 
+      Serial.write("0");
+      Serial.println("No change");
+      msg = 3;
+      break;
+      
+    case 1:    // 
+      Serial.write("0");
+      //motor control commands
+      Serial.println("Open the shades");
+      msg = 3;
+      break;
+      
+    case 2:    // 
+      Serial.write("0");
+      //motor control commands
+      Serial.println("Close the shades");
+      msg = 3;
+      break;
+      
+    case 3:
+      delay(100);
+      break;
+  }
+}
+  delay(1000);        // delay in between reads for stability
+}
