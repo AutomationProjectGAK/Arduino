@@ -1,11 +1,4 @@
-/*
-*           Arduino Program
-*
-*       *Main Arduino Program*
-*
-*/
-
-  int x = 0;
+ int x = 0;
 
 void setup() {
   // initialize serial communication:
@@ -22,36 +15,36 @@ if (Serial.available()){
   //
   switch (msg) {
     case 0:    // 
-      Serial.write("Message Confirmed!");
+      Serial.write("Reset");
       Serial.println("");
       msg = 3;
       break;
       
-    case 1:    // 
+    case 1:
       //motor control commands
       if (x != 1){
-      Serial.write("Opening the shades.");
+      Serial.write("Open");
       Serial.println("");
         //Do motor controls
         x=1;
         }
         else{
-          Serial.write("The shades are open.");
+          Serial.write("Opened");
           Serial.println("");
           }
       msg = 3;
       break;
       
-    case 2:    // 
-      Serial.write("Closing the shades");
-      Serial.println("");
+    case 2:   
       //motor control commands
       if (x != 2){
+      Serial.write("Close");
+      Serial.println("");
         //Do motor controls
         x=2;
       }
         else{
-          Serial.write("The shades are closed.");
+          Serial.write("Closed");
           Serial.println("");
           }
       msg = 3;
