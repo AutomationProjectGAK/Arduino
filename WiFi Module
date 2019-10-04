@@ -23,7 +23,7 @@ void setup() {
   //Start wifi subsystem
   WiFi.begin(ssid, password);
   //attempt to connect to the WiFi network and then connect to the MQTT server
-  //reconnect():
+  reconnect();
 
   //wait a bit before starting the main loop
     delay(2000);
@@ -66,4 +66,26 @@ void callback(char* topic, byte* payload, unsigned int length)  {
     Serial.print("2");
   }
   
+}
+
+
+void reconnect() {
+  // Loop until we're reconnected
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    // Attempt to connect
+    if (client.connect("arduinoClient")) {
+      Serial.println("connected");
+      // Once connected, publish an announcement...
+      client.publish("outTopic","hello world");
+      // ... and resubscribe
+      client.subscribe("inTopic");
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
+    }
+  }
 }
