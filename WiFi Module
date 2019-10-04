@@ -8,12 +8,12 @@
 #include <ESP8266WiFi.h>
 
 #define MQTT_SERVER "XXX.XXX.XX.XXX" 
-const char* ssid  =  "WIFI NAME";
-const char* password  =  "PASSWORD";
+const char* ssid  =  "Honor 8tp";
+const char* password  =  "vittusaatana";
 
 char* Topic   =   "inTopic";    //Topic to be subscribed
 
-WiFiClient wificlient;
+WiFiClient wifiClient;
 
 void setup() {
   //initialize the serial
