@@ -4,12 +4,14 @@
 *       *Main Arduino Program*
 *
 */
-
+#include <Servo.h> //Servo library
   int x = 0;
+  Servo myservo; //Servo name is myservo
 
 void setup() {
   // initialize serial communication:
   Serial.begin(9600);
+  //myservo.attach(6);  // attaches the servo signal pin on pin D6
 }
 
 void loop() {
@@ -27,12 +29,15 @@ if (Serial.available()){
       msg = 3;
       break;
       
-    case 1:    // 
-      //motor control commands
+    case 1:
       if (x != 1){
       Serial.write("Opening the shades.");
       Serial.println("");
         //Do motor controls
+        myservo.attach(6);//Always use attach function after detach to re-connect your servo with the board
+        myservo.write(0); //Turn clockwise at high speed
+        delay(1500);
+        myservo.detach();//Stop. You can use deatch function or use write(x), as x is the middle of 0-180 which is 90, but some lack of precision may change this value
         x=1;
         }
         else{
@@ -48,6 +53,10 @@ if (Serial.available()){
       //motor control commands
       if (x != 2){
         //Do motor controls
+        myservo.attach(6);//Always use attach function after detach to re-connect your servo with the board
+        myservo.write(180); //Turn clockwise at high speed
+        delay(1500);
+        myservo.detach();//Stop. You can use deatch function or use write(x), as x is the middle of 0-180 which is 90, but some lack of precision may change this value
         x=2;
       }
         else{
