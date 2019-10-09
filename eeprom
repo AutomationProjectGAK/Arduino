@@ -1,0 +1,84 @@
+#include <Servo.h> //Servo library
+#include <EEPROM.h>
+const int cadd = 11;
+const int xadd = 5;
+  Servo myservo; //Servo name is myservo
+
+void setup() {
+  // initialize serial communication:
+  Serial.begin(9600);
+  myservo.attach(6);  // attaches the servo signal pin on pin D6
+}
+
+void loop() {
+  int msg  =  4;
+
+if (Serial.available()){
+  int msg = Serial.parseInt();
+  int count = EEPROM.read(cadd);
+  int x = EEPROM.read(xadd);
+
+  if(count == 255){//255 is the default value of each memory address
+     x = 0;
+     EEPROM.write(xadd,0);
+     EEPROM.write(cadd,0);
+   }
+   
+  switch (msg) {
+    case 0:    // 
+      Serial.write("Message Confirmed!");
+      Serial.println("");
+      msg = 4;
+      break;
+      
+    case 1:
+      if (x != 1){
+      Serial.write("Opening the shades.");
+      Serial.println("");
+        //Do motor controls
+        myservo.attach(6);//Always use attach function after detach to re-connect your servo with the board
+        myservo.write(0); //Turn clockwise at high speed
+        delay(1500);
+        myservo.detach();//Stop. You can use deatch function or use write(x), as x is the middle of 0-180 which is 90, but some lack of precision may change this value
+        //x=1;
+        EEPROM.write(xadd,1);
+        }
+        else{
+          Serial.write("The shades are open.");
+          Serial.println("");
+          }
+      msg = 4;
+      break;
+      
+    case 2:    // 
+      Serial.write("Closing the shades");
+      Serial.println("");
+      //motor control commands
+      if (x != 2){
+        //Do motor controls
+        myservo.attach(6);//Always use attach function after detach to re-connect your servo with the board
+        myservo.write(180); //Turn clockwise at high speed
+        delay(1500);
+        myservo.detach();//Stop. You can use deatch function or use write(x), as x is the middle of 0-180 which is 90, but some lack of precision may change this value
+        //x=2;
+        EEPROM.write(xadd,2);
+      }
+        else{
+          Serial.write("The shades are closed.");
+          Serial.println("");
+          }
+      msg = 4;
+      break;
+
+    case 3:
+      EEPROM.write(cadd,255);
+      Serial.println("Reset curtain state memory.");
+      break;
+      
+    case 4:
+      delay(100);
+      break;
+  }
+}
+  delay(1000);        // delay in between reads for stability
+}
