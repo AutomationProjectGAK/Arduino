@@ -7,7 +7,6 @@ const int xadd = 5;
 void setup() {
   // initialize serial communication:
   Serial.begin(9600);
-  myservo.attach(6);  // attaches the servo signal pin on pin D6
 }
 
 void loop() {
