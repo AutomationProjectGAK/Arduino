@@ -1,0 +1,99 @@
+# define address 0x4A
+#include <Wire.h>  
+#include <EEPROM.h>
+
+byte val = 0;
+const int inPin = 7;
+int memBounce = HIGH;
+unsigned long ptime = 0;
+unsigned long de = 250;
+const int countadd = 10;
+const int maxadd = 50;
+const int minadd = 100;
+int count = EEPROM.read(countadd);
+int maxtemp = EEPROM.read(maxadd);
+int mintemp = EEPROM.read(minadd);
+
+void button(void);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(inPin, INPUT_PULLUP);
+  Wire.begin();
+}
+
+void loop() {
+  if (Serial.available()){
+  count = EEPROM.read(countadd);
+  maxtemp = EEPROM.read(maxadd);
+  mintemp = EEPROM.read(minadd);
+  int msg = Serial.parseInt();
+  if (msg == 1){
+  Wire.beginTransmission(address);
+  Wire.write(val);
+  Wire.requestFrom (address, 1);
+  if (Wire.available()){
+    int temperature = Wire.read(); 
+    //minmax(temperature);
+    if(count == 255){//255 is the default value of each memory address
+     maxtemp = temperature;
+     EEPROM.write(maxadd,temperature);
+     mintemp = temperature;
+     EEPROM.write(minadd,temperature);
+     EEPROM.write(countadd,0);
+    }
+    
+    if(temperature>=128){//128 = B10000000
+      temperature=temperature-256;//255 = B11111111
+      Serial.print (temperature);
+      Serial.println("oC"); 
+    }
+    else{
+      Serial.print (temperature);
+      Serial.println("oC");
+    }
+    if (count != 255){
+      if (temperature > maxtemp){
+      EEPROM.write(maxadd,temperature);
+    }
+    if (temperature < mintemp){
+      EEPROM.write(minadd,temperature);
+    }
+    }
+  }
+  else{
+    Serial.write ("Unable to get the value from TC74");
+    Serial.println("");
+  }
+ delay (100);
+ Wire.endTransmission();
+}
+ if (msg == 2){
+  Serial.print(maxtemp);
+  Serial.println("oC (max)");
+ }
+ if (msg == 3){
+  Serial.print(mintemp);
+  Serial.println("oC (min)");
+ }
+ if (msg ==4){
+  EEPROM.write(countadd,255);
+  Serial.println("Reset eeprom");
+ }
+}
+ button();
+ //delay(1000);
+}
+
+void button(void){
+  int state = digitalRead(inPin);
+  //if (state == LOW && state != memBounce){
+  if (state == LOW && (millis()- ptime > de)&&(state != memBounce)){
+    //if(state != memBounce){
+    Serial.println("10");
+    ptime = millis();
+    //}
+  }
+  memBounce = state;
+}
