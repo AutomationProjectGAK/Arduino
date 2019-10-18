@@ -178,11 +178,11 @@ void EEPROM_write(unsigned int uiAddress, unsigned char ucData){
 
 void button(void){
   //int state = digitalRead(7);
-  int state = PIND & B10000000;
-  if (state == 0 && (millis()- ptime > de)&&(state != memBounce)){
-    Serial.println("10");
-    ptime = millis();
+  int state = PIND & B10000000;                                           //Read state of pin 7
+  if (state == 0 && (millis()- ptime > de)&&(state != memBounce)){        //Execute the instructions when button is pressed, debounce time > 250ms, and the changing of push button state is detected
+    Serial.println("10");                                                 //Send signal to Pi
+    ptime = millis();                                                     //Record time
     //}
   }
-  memBounce = state;
+  memBounce = state;                                                      //Record the state of push button 
 }
