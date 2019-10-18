@@ -1,96 +1,185 @@
-# define address 0x4A
-#include <Wire.h>  
-#include <EEPROM.h>
+# define address 0x4A         //Address of slave device
+//#include <EEPROM.h>
+//#include <Wire.h>  
 
-byte val = 0;
-const int inPin = 7;
-int memBounce = HIGH;
-unsigned long ptime = 0;
-unsigned long de = 250;
-const int countadd = 10;
-const int maxadd = 50;
-const int minadd = 100;
-int count = EEPROM.read(countadd);
-int maxtemp = EEPROM.read(maxadd);
-int mintemp = EEPROM.read(minadd);
+//byte val = 0;
+int memBounce = 1;            // record the state of the push button after the button code executed to prevent long press of the button  
+unsigned long ptime = 0;      // record the time for 
+unsigned long de = 250;       // debounce interval
+const int countadd = 10;      // address of the counter 
+const int maxadd = 50;        // address of max temp
+const int minadd = 100;       // address of min temp
+int count;                    // the counter checks whether it is the first time or not max temp and min temp are set 
+unsigned char maxtemp;        // variable stores max temp in binary
+unsigned char mintemp;        // variable stores min temp in binary
 
-void button(void);
+void minmax(unsigned char temperature);                                       //function displaying current temp, sorting max and min temp, and saving those two to eeprom
+unsigned char EEPROM_read(unsigned int uiAddress);                            //function reading a byte from eeprom
+void EEPROM_write(unsigned int uiAddress, unsigned char ucData);              //function writing a byte to the eeprom.
+void button(void);                                                            //function send push signal to Pi and codes prevent long press and debounce 
 
 void setup() {
-  // put your setup code here, to run once:
-  Serial.begin(9600);
-  pinMode(inPin, INPUT_PULLUP);
-  Wire.begin();
+  Serial.begin(9600);                                                         // opens serial port, sets data rate to 9600 bps
+  //Set pin 7 as INPUT PULLUP
+  //pinMode(inPin, INPUT_PULLUP);
+  //PORTD |= B10000000; 
+  PORTD = 1<<PD7;//PD7 = 7 (Shift 1(B00000001) by 7 bits)
+  // Activate pull-up resistors to SDA(A4) and SCL(A5).
+  PORTC = (1<<PC4)|(1<<PC5);
+  //Wire.begin();
+  // CPU clk f(Hz) in slave must be at least 16 times higher than SCL f(Hz)
+  // TC74 I2C clock f(Hz) = 100kHz
+  // Set SCL f(Hz) (16 Mhz/(16+2*10*64) = 12,3 kHz (Page 180)
+  TWSR   =  (1<<TWPS1) | (1<<TWPS0); //(Page 200) Prescale = 64 (4^3)
+  TWBR   =  10;
 }
 
 void loop() {
-  if (Serial.available()){
-  count = EEPROM.read(countadd);
+  count = EEPROM_read(countadd);                                              //read a byte from counter address
+  maxtemp = EEPROM_read(maxadd);                                              //read a byte from max temp address
+  mintemp = EEPROM_read(minadd);                                              //read a byte from min temp address
+  /*count = EEPROM.read(countadd);
   maxtemp = EEPROM.read(maxadd);
-  mintemp = EEPROM.read(minadd);
-  int msg = Serial.parseInt();
-  if (msg == 1){
-  Wire.beginTransmission(address);
+  mintemp = EEPROM.read(minadd);*/
+  if (Serial.available()){                                                    //execute instructions in "if" only when receiving data from serial port (from Pi)
+  int msg = Serial.parseInt();                                                //variable store first integer received from in the incoming serial (from the serial buffer)
+  if (msg == 1){                                                              //case 1: read temp from TC74, display it, sort max temp and min temp and save them to eeprom
+  /*Wire.beginTransmission(address);
   Wire.write(val);
   Wire.requestFrom (address, 1);
   if (Wire.available()){
-    int temperature = Wire.read(); 
-    //minmax(temperature);
-    if(count == 255){//255 is the default value of each memory address
-     maxtemp = temperature;
-     EEPROM.write(maxadd,temperature);
-     mintemp = temperature;
-     EEPROM.write(minadd,temperature);
-     EEPROM.write(countadd,0);
-    }
-    
-    if(temperature>=128){//128 = B10000000
-      temperature=temperature-256;//255 = B11111111
-      Serial.print (temperature);
-      Serial.println("oC"); 
-    }
-    else{
-      Serial.print (temperature);
-      Serial.println("oC");
-    }
-    if (count != 255){
-      if (temperature > maxtemp){
-      EEPROM.write(maxadd,temperature);
-    }
-    if (temperature < mintemp){
-      EEPROM.write(minadd,temperature);
-    }
-    }
+    int temperature = Wire.read();*/
+  TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN);                // Make Start Condition B10100100
+  //TWINT: TWI Interrupt Flag(clearing this flag (set to 1) starts the operation of the TWI)
+  // TWSTA: TWI START Condition Bit(set to 1  to transmit a START condition)
+  // TWEN: TWI Enable Bit(set to 1 to  enable the 2-wire serial interface)
+  // Wait for TWINT Flag set.  This indicates that the START condition has been transmitted
+  while (!(TWCR & (1 << TWINT)));                                   //block the code until TWCR & (1 << TWINT) != 0 (when TWINT is set to 1)
+  // Send address with Read. TWDR must only be written when TWINT is high. If not, the access will be discarded, and the write collision bit (TWWC) will be set in the TWCR register
+  TWDR = (address << 1) | B00000001;//B10010101                     //Slave address + bit 0 (address package)                    
+  TWCR = (1 << TWINT) | (1 << TWEN);                                //Clear flag and start transmitting address
+  while (!(TWCR & (1 << TWINT)));                                   // Wait for TWINT Flag set. This indicates that the SLA+W has been transmitted, and ACK/NACK has been received.
+  TWDR = B00000000;                                                 //Send command read temperature (RTR) to TC74 
+  TWCR = (1 << TWINT) | (1 << TWEN);                                //Clear flag and start transmitting command
+  while (!(TWCR & (1 << TWINT)));                                   // Wait for TWINT Flag set. This indicates that the command has been transmitted, and ACK/NACK has been received.
+  char temperature = TWDR;                                          //Take value
+  TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);                 // Make Stop Condition.
+  
+  minmax(temperature);
+  //minmax(0b11100111);                                             //Check for the temp of -25oC
+  delay(100);
+  //Wire.endTransmission();}
   }
-  else{
-    Serial.write ("Unable to get the value from TC74");
-    Serial.println("");
-  }
- delay (100);
- Wire.endTransmission();
-}
- if (msg == 2){
-  Serial.print(maxtemp);
-  Serial.println("oC (max)");
+ if (msg == 2){                                                   //Case 2: displaying max temp
+    if( (maxtemp & 0x80) != 0 ){                                  //if MSB = 1
+      Serial.print("-");                                          //add (-) sign
+      Serial.print( (maxtemp ^ B11111111) + 1 );                  //Flip the bits and add 1 to find positive version of the number
+      Serial.println("oC (max)");
+    }
+    else{//Positive temp then just print
+      Serial.print(maxtemp);
+      Serial.println("oC (max)");
+    }
  }
- if (msg == 3){
-  Serial.print(mintemp);
-  Serial.println("oC (min)");
+ if (msg == 3){                                                   //Case 3: displaying min temp
+  if( (mintemp & 0x80) != 0 ){                                    //if MSB = 1
+      Serial.print("-");                                          //add (-) sign
+      Serial.print( (mintemp ^ B11111111) + 1 );                  //Flip the bits and add 1 to find positive version of the number
+      Serial.println("oC (min)");
+    }
+    else{//Positive temp then just print
+      Serial.print(mintemp);
+      Serial.println("oC (min)");
+    }
  }
- if (msg ==4){
-  EEPROM.write(countadd,255);
+ if (msg == 4){                                                   //Case 4: reseting max temp and min temp
+  EEPROM_write(countadd,255);                                     //By writing counter to 255(default value of each memory address), the program will later understand that next time will be the first time storing max and min temp
+  //EEPROM.write(countadd,255);
   Serial.println("Reset eeprom");
  }
 }
- button();
+ button();                                                        //call function button which has been descrived above
  //delay(1000);
 }
 
+void minmax(unsigned char temp){
+  /*count = EEPROM.read(countadd);
+  maxtemp = EEPROM.read(maxadd);
+  mintemp = EEPROM.read(minadd);*/
+  count = EEPROM_read(countadd);
+  maxtemp = EEPROM_read(maxadd);
+  mintemp = EEPROM_read(minadd);
+  /*//Check for minus degree
+  if(temp >= 128){                                          //128 = B10000000
+      temp = temp-256 ;                                     //255 = B11111111
+      Serial.print (temp);
+      Serial.println("oC"); 
+  }
+  else{
+      Serial.print (temp);
+      Serial.println("oC");
+  }*/
+ //Check for minus degree
+    if( (temp & 0x80) != 0 ){                               //if MSB = 1 (MSB indicate the sign of the number (+) or (-))
+      Serial.print("-");                                    //add (-) sign
+      Serial.print( (temp ^ B11111111) + 1 );               //Flip the bits and add 1 to find positive version of the number
+      Serial.println("oC");
+    }
+    else{                                                   //Positive temp then just print
+      Serial.print(temp);
+      Serial.println("oC");
+    }
+    //When initially start the program or when reseting max and min temp, there is only one value, so assign it to both max and min
+     if(count == 255){                                     //255 is the default value of each memory address
+     //maxtemp = temp;
+     //EEPROM.write(maxadd,temp);
+     EEPROM_write(maxadd,temp);                            //save max temp value to max temp address
+    // mintemp = temp;
+     //EEPROM.write(minadd,temp);
+     //EEPROM.write(countadd,0);
+     EEPROM_write(minadd,temp);                           // save min temp value to min temp address
+     EEPROM_write(countadd,0);                            //assign to different value to execute "else" statements the next times 
+    }
+    //After the first time, the following instructions, which sort max and min temp, will be executed until the counter is reset
+    else{
+      if ((temp > maxtemp && ((temp < 128 && maxtemp < 128) ||(temp >= 128 && maxtemp >= 128))) || (temp < 128 && maxtemp >= 128)){             //if both max temp and current temp are + or -, the greater the number the higher the temp
+      EEPROM_write(maxadd,temp)                          //Save new max temp to eeprom                                                          //128 = B10000000 (MSB = 1 means (-) as mentioned above)
+      //EEPROM.write(maxadd,temp);
+      }
+      if ((temp < mintemp && ((temp < 128 && mintemp < 128) ||(temp >= 128 && mintemp >= 128))) || (temp >=  128 && mintemp < 128 )){
+      EEPROM_write(minadd,temp);                         //Save new min temp to eeprom
+      //EEPROM.write(minadd,temp);
+      }
+    }
+}
+
+unsigned char EEPROM_read(unsigned int uiAddress){
+   // Wait for completion of previous write. If a write operation is in progress, it is not possible read the EEPROM 
+   while(EECR & (1<<EEPE));                             //Block the code until EEPE is set to 0
+   // Set up address register 
+   EEAR = uiAddress;
+   // Start eeprom read by writing EERE: EEPROM Read Enable
+   EECR |= (1<<EERE);                                   //The EEPROM read access takes one instruction, and the requested data is available immediately. When the EEPROM is read, the CPU is halted for four cycles before the next instruction is executed.
+   // Return data from Data Register
+   return EEDR;
+}
+
+void EEPROM_write(unsigned int uiAddress, unsigned char ucData){
+  // Wait for completion of previous write. The EEPROM can not be programmed during a CPU write to the flash memory.
+  while(EECR & (1<<EEPE));                             //Block the code until EEPE is set to 0
+  // Set up address and Data Registers
+  EEAR = uiAddress;                                    
+  EEDR = ucData;
+  // Write logical one to EEMPE: EEPROM Master Write Enable. The EEMPE bit must be written to one before a logical one is written to EEPE, otherwise no EEPROM write takes place.
+  EECR |= (1<<EEMPE);                                  // When EEMPE is set, setting EEPE within four clock cycles will write data to the EEPROM at the selected address. Hardware clears the bit to zero after. Then, setting EEPE will have no effect.
+  // Start eeprom write by setting EEPE: EEPROM Write Enable 
+  EECR |= (1<<EEPE);
+}
+
 void button(void){
-  int state = digitalRead(inPin);
-  //if (state == LOW && state != memBounce){
-  if (state == LOW && (millis()- ptime > de)&&(state != memBounce)){
-    //if(state != memBounce){
+  //int state = digitalRead(7);
+  int state = PIND & B10000000;
+  if (state == 0 && (millis()- ptime > de)&&(state != memBounce)){
     Serial.println("10");
     ptime = millis();
     //}
