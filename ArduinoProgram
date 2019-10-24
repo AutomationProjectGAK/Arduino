@@ -4,72 +4,117 @@
 *       *Main Arduino Program*
 *
 */
-#include <Servo.h> //Servo library
-  int x = 0;
-  Servo myservo; //Servo name is myservo
+//#include <Servo.h> //Servo library
+#include <EEPROM.h>
+const int cadd = 11;                                                     //counter address
+const int xadd = 5;                                                      //curtain state address
+//Servo myservo; 
+
+void set(void);                                                         //Function setting the servo on
+void detachPin(void);                                                   //Function detach pin preventing servo running
 
 void setup() {
   // initialize serial communication:
   Serial.begin(9600);
-  //myservo.attach(6);  // attaches the servo signal pin on pin D6
 }
 
 void loop() {
-  int msg  =  3;
-
 if (Serial.available()){
-  
-  int msg = Serial.parseInt();
-  
-  //
+  int msg = Serial.parseInt();                                          // variable read first integer from serial buffer (from Pi)
+  int count = EEPROM.read(cadd);                                        // counter used to indicate whether it is first time or reset time of the eeprom storing curtain state
+  int x = EEPROM.read(xadd);                                            // variable saving curtain state 
+
+  if(count == 255){                                                     // 255 is the default value of each memory address
+     x = 0;
+     EEPROM.write(xadd,0);                                              //reset curtain state
+     EEPROM.write(cadd,0);                                              // set count = 0 so that the instructions wont be accessed in the next times after first onr reset time 
+   }
+   
   switch (msg) {
-    case 0:    // 
+    case 0:                                                             //Do nothing just confirming
       Serial.write("Message Confirmed!");
       Serial.println("");
-      msg = 3;
       break;
       
-    case 1:
+    case 1:                                                             //Open the curtain
       if (x != 1){
       Serial.write("Opening the shades.");
       Serial.println("");
         //Do motor controls
-        myservo.attach(6);//Always use attach function after detach to re-connect your servo with the board
+        /*myservo.attach(6);//Always use attach function after detach to re-connect your servo with the board
         myservo.write(0); //Turn clockwise at high speed
         delay(1500);
-        myservo.detach();//Stop. You can use deatch function or use write(x), as x is the middle of 0-180 which is 90, but some lack of precision may change this value
-        x=1;
+        myservo.detach();//Stop. You can use deatch function or use write(x), as x is the middle of 0-180 which is 90, but some lack of precision may change this value*/
+        set();                                                          //Set servo
+        OCR1A = 1150; //800/39999=2% duty cycle                          //Value=800 , pulse = 800*0.5us = 400us (Require pulse 400us - 2550us according to servo specification)
+        delay(600);
+        detachPin();                                                    //Stop servo
+        EEPROM.write(xadd,1);                                           //Record curtain state
         }
-        else{
+        else{                                                           // if Pi commands the same function,do nothing
           Serial.write("The shades are open.");
           Serial.println("");
           }
-      msg = 3;
       break;
       
-    case 2:    // 
+    case 2:                                                             //Close the curtain 
       Serial.write("Closing the shades");
       Serial.println("");
       //motor control commands
       if (x != 2){
         //Do motor controls
-        myservo.attach(6);//Always use attach function after detach to re-connect your servo with the board
+        /*myservo.attach(6);//Always use attach function after detach to re-connect your servo with the board
         myservo.write(180); //Turn clockwise at high speed
         delay(1500);
-        myservo.detach();//Stop. You can use deatch function or use write(x), as x is the middle of 0-180 which is 90, but some lack of precision may change this value
-        x=2;
+        myservo.detach();//Stop. You can use deatch function or use write(x), as x is the middle of 0-180 which is 90, but some lack of precision may change this value*/
+        set();                                                        //Set servo
+        OCR1A = 4800;//5100/39999= 12.75% duty cycle                  //Value=5100, pulse = 5100*0.5us = 2550us (Require pulse 400us - 2550us according to servo specification)
+        delay(600);
+        detachPin();                                                  //Stop servo
+        EEPROM.write(xadd,2);                                         //Record curtain state
       }
-        else{
+        else{                                                         // if Pi commands the same function,do nothing
           Serial.write("The shades are closed.");
           Serial.println("");
           }
-      msg = 3;
+      break;
+
+    case 3:                                                            //Reset curtain state                                                  
+      EEPROM.write(cadd,255);                                          //Set to 255 to access set new curtain state function above
+      Serial.println("Reset curtain state memory.");
       break;
       
-    case 3:
+    default:                                                            //if none of the 3 above cases is accessed
       delay(100);
       break;
   }
 }
-  delay(1000);        // delay in between reads for stability
+  delay(1000);                                                          // delay in between reads for stability
+}
+
+void set (void){
+    TCCR1A = 0;
+    TCCR1B = 0;
+    // RESET control register A and B
+    
+    DDRB |= (1 << PB1);                                                 // Set OUTPUT ( pin 9)
+    
+    // Fast PWM, free choosing TOP_value ICR1
+    TCCR1A |= (1 << WGM11);
+    TCCR1B |= (1 << WGM12) | (1 << WGM13);
+
+    // none-inverting mode
+    TCCR1A |= (1 << COM1A1);
+ 
+    TCCR1B |= (1 << CS11);                                              // prescale 8
+    // f =16mhz/8=2mhz
+    // timer period = 1/2mhz= 0.5 us
+    ICR1 = 39999;                                                       //f(pwm) = f(cpu)/N(1+ICR1) (f(pwm)= 50Hz, fcpu= 16MHz, N(prescale) =8)
+    // set up ICR1A=39999, this gives PWM period of 20ms (50 Hz).
+}
+
+void detachPin(void){
+     TCCR1A = 0;
+     TCCR1B = 0;
+     // RESET control register A and B to stop the pulse
 }
